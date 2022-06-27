@@ -1,3 +1,8 @@
+# 2022-Jun-20 Initial version
+# TODO
+# - [ ] Add -clean -figures -pdf -epub -html switches
+# - [ ] Do not automatically clean the output directory
+
 param (
     [Parameter(Mandatory,Position=0)]
     [ValidateNotNullOrEmpty()]

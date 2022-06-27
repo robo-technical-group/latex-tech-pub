@@ -1,3 +1,7 @@
+# 2022-Jun-20 Initial version
+# TODO
+# - [ ] Add -quick switch (just run one pass of pdflatex)
+
 param (
     [Parameter(Mandatory,Position=0)]
     [ValidateNotNullOrEmpty()]
