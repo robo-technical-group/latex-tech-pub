@@ -1,0 +1,9 @@
+to hypotrochoid
+repeat 20 [
+    repeat 180 [
+        forward 1
+        right 2
+    ]
+    right 18
+]
+end

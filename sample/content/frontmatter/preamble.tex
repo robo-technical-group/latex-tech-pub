@@ -1,0 +1,38 @@
+% Input and output encodings
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+% Enable microtype for additional font tweaks
+\usepackage{microtype}
+% Widow and orphan control
+\usepackage[defaultlines=2,all]{nowidow}
+% Intelligent quotations
+\usepackage{csquotes}
+% Filler text
+\usepackage[latin,french,german,czech,spanish,main=english,math=normal]{babel}
+\usepackage{blindtext}
+% Advanced math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{chemformula}
+% Function plots (includes tikZ)
+\usepackage{xcolor} % table option conflicts with pgfplots
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+% Index
+\usepackage{makeidx}
+\makeindex
+% Glossary
+\usepackage[style=long3col]{glossaries}
+\makenoidxglossaries
+% Bibliography
+\usepackage[backend=biber,style=alphabetic]{biblatex}
+% Automated colophon
+\usepackage{colophon}
+% Additional logos (like \XeTeX)
+\usepackage{metalogo}
+% Code listings
+\usepackage{listings}
+% Hyperlinks
+\usepackage[colorlinks=true]{hyperref}
+% Smart references; must appear after hyperref
+\usepackage{cleveref}
