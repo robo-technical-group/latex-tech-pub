@@ -5,14 +5,14 @@ Information on the book is available at [Leanpub](https://leanpub.com/latex-tech
 
 # To Do
 
-- [ ] Sample book
-  - [ ] Multiple chapters
-  - [ ] Bibliography
-  - [ ] Index
-  - [ ] Glossary
-- [ ] PDF build scripts
+- [x] Sample book
+  - [x] Multiple chapters
+  - [x] Bibliography
+  - [x] Index
+  - [x] Glossary
+- [x] PDF build scripts
   - [x] PowerShell
-  - [ ] bash
+  - [x] bash
 - [ ] ePub build scripts
   - [ ] PowerShell
   - [ ] bash
