@@ -1,0 +1,55 @@
+\chapter{Additional examples}
+\section{Code listings}
+\lstset{
+    basicstyle = \ttfamily,
+    keywordstyle = \color{blue}\textbf,
+    commentstyle = \color{gray},
+    stringstyle = \color{green!70!black},
+    stringstyle = \color{red},
+    numbers=left,
+    numbersep=5pt,
+    numberstyle = \scriptsize\sffamily\color{gray},
+    showstringspaces = false,
+}
+Here is a portion of the bash build script, using the \verb|listings| package.
+
+\begin{lstlisting}[language=bash,caption={Portion of build.sh script.},label={lst:build}]
+if [ $clean -eq 1 -a -e $outdir ]
+then
+    if [ $DEBUG -eq 1 ]
+    then
+        echo "Removing output directory ${outdir}."
+    fi
+    rm -rf $outdir
+fi
+
+if [ $pdf -eq 1 ]
+then
+    if [ $DEBUG -eq 1 ]
+    then
+        echo "Building PDF."
+    fi
+    build_pdf "${outdir}/pdf"
+fi
+\end{lstlisting}
+
+Here is a code listing that is loaded from an external file.
+
+\lstinputlisting[language=logo,caption={Drawing a hypotrochoid in Logo.},label={lst:star}]{content/main/more/star.logo}
+
+\section{\TeX\ equation listing and output}
+
+Here is \TeX\ code for the equation that appears in \autocite{lam2017}.
+
+\lstinputlisting[language={[LaTeX]TeX},caption={\TeX\ code for a mathematics expression.},label={lst:example}]{content/main/more/eq.tex}
+
+\input{content/main/more/eq}
+
+\section{\TeX\ table listing and output}
+
+How about a table? Here are the ten most popular Linux distributions according to \url{distrowatch.com}
+for the first half of 2022 \autocite{dis2022}.
+
+\lstinputlisting[language={[LaTeX]TeX},caption={\TeX\ code for a colorful table.},label={lst:table}]{content/main/more/distrowatch.tex}
+
+\input{content/main/more/distrowatch}
