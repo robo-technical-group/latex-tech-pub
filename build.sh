@@ -5,8 +5,11 @@
 # Run ./build.sh --help for more information.
 ######################################################################
 # TODO
-# - [ ] Add interactive mode (automatically add debug mode).
+# - [X] Add interactive mode.
 # - [X] Support XeLaTex.
+# - [X] Return to original working directory after work has finished.
+# - [ ] Use `latexmk` if available.
+# - [ ] Rename to `build-latex` to allow placement in PATH.
 ######################################################################
 # BSD 3-Clause License
 #
@@ -50,9 +53,11 @@ readonly xelatex=$(which xelatex)
 # Additional global variables
 DEBUG=0
 clean=0
+cwd=$( pwd )
 epub=0
 figs=0
 html=0
+interactive=0
 mainfile=main
 outdir=./latex.out
 pdf=0
@@ -92,16 +97,21 @@ build_pdf() {
     done
 
     echo "Starting PDF first pass." | tee $logfile
-    if [ $DEBUG -eq 0 ]
+    if [ $interactive -eq 0 ]
     then
-        $pdfbin -interaction=batchmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+        if [ $DEBUG -eq 0 ]
+        then
+            $pdfbin -interaction=batchmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+        else
+            $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+        fi
     else
-        $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+        $pdfbin -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
     fi
 
     if [ $quick -eq 0 ]
     then
-        echo "Building indices." | tee -a $logfile
+        echo "Building index." | tee -a $logfile
         if [ $DEBUG -eq 0 ]
         then
             $makeindex -o ${outdir}/${mainfile}.ind -t ${outdir}/${mainfile}.ind.log ${outdir}/$mainfile >> $logfile 2>&1
@@ -117,20 +127,38 @@ build_pdf() {
             $biber --input-directory $outdir --output-directory $outdir $mainfile | tee -a $logfile
         fi
 
-        echo "Starting PDF second pass." | tee -a $logfile
+        echo "Building glossary." | tee -a $logfile
         if [ $DEBUG -eq 0 ]
         then
-            $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile >> $logfile
+            $makeglossaries -d $outdir $mainfile >> $logfile
         else
-            $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            $makeglossaries -d $outdir $mainfile | tee -a $logfile
+        fi
+
+        echo "Starting PDF second pass." | tee -a $logfile
+        if [ $interactive -eq 0 ]
+        then
+            if [ $DEBUG -eq 0 ]
+            then
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile >> $logfile
+            else
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            fi
+        else
+            $pdfbin -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
         fi
 
         echo "Starting PDF third pass." | tee -a $logfile
-        if [ $DEBUG -eq 0 ]
+        if [ $interactive -eq 0 ]
         then
-            $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile >> $logfile
+            if [ $DEBUG -eq 0 ]
+            then
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile >> $logfile
+            else
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            fi
         else
-            $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            $pdfbin -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
         fi
     fi
 }
@@ -149,6 +177,8 @@ print_help() {
     echo "    Builds any figure files located in the working directory."
     echo "  -h, --html"
     echo "    Builds the web site files."
+    echo "  -i, --interactive"
+    echo "    Run programs in interactive mode."
     echo "  -p, --pdf"
     echo "    Builds the PDF file."
     echo "  -q, --quick"
@@ -507,6 +537,10 @@ do
         html=1
         ;;
 
+    -i|--interactive)
+        interactive=1
+        ;;
+
     -p|--pdf)
         pdf=1
         ;;
@@ -561,3 +595,5 @@ then
     fi
     build_pdf "${outdir}/pdf"
 fi
+
+cd "$cwd"

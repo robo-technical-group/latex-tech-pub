@@ -26,6 +26,9 @@ Builds any figure files located in the working directory.
 .PARAMETER Html
 Builds the web site files.
 
+.PARAMETER Interactive
+Runs the LaTeX executables in interactive mode.
+
 .PARAMETER Pdf
 Builds the PDF file.
 
@@ -37,8 +40,9 @@ Use XeLaTeX engine instead of PdfLaTex engine for PDF output.
 #>
 
 ######################################################################
-# 2022-Jun-20 Initial version
-# 2022-Jun-26 Repackage as a single script with functions
+# 2022-Jun-20 Initial version.
+# 2022-Jun-26 Repackage as a single script with functions.
+# 2022-Jul-12 Add interactive mode; return to original work directory.
 ######################################################################
 # TODO
 # - [X] Add -clean -figures -pdf -epub -html switches.
@@ -49,11 +53,14 @@ Use XeLaTeX engine instead of PdfLaTex engine for PDF output.
 #       automatically duplicate directory structure;
 #       ignore latex.out directory.
 # - [X] Verify access to required executables.
-# - [ ] Add interactive mode (automatically activate verbose mode).
+# - [X] Add interactive mode.
 # - [X] Support XeLaTeX.
 # - [X] Remove Start-Process; revert to direct calls.
 # - [X] Move executable names into variables to allow for alternate
 #       specification (e.g. executable not in path).
+# - [X] Return to original working directory after work has finished.
+# - [ ] Use `latexmk` if available.
+# - [ ] Rename to `build-latex` to allow placement in PATH.
 ######################################################################
 # BSD 3-Clause License
 #
@@ -93,6 +100,7 @@ param (
     [switch]$All,
     [switch]$Clean,
     [switch]$Figures,
+    [switch]$Interactive,
     [switch]$Pdf,
     [switch]$Epub,
     [switch]$Html,
@@ -102,14 +110,6 @@ param (
 
 # Executables
 # Modify (e.g. supply full path) as needed for executables not located in your path.
-<#
-readonly biber=$(which biber)
-readonly makeindex=$(which makeindex)
-readonly makeglossaries=$(which makeglossaries)
-readonly pdflatex=$(which pdflatex)
-readonly tree=$(which tree)
-readonly xelatex=$(which xelatex)
-#>
 Set-Variable Biber -Option ReadOnly -Value "biber"
 Set-Variable MakeGlossaries -Option ReadOnly -Value "makeglossaries"
 Set-Variable MakeIndex -Option ReadOnly -Value "makeindex"
@@ -150,24 +150,66 @@ function Build-Pdf {
     }
 
     $PdfExe = $Xetex ? $XeLatex : $PdfLatex
+    $InvExpr = ""
     If (Test-Executables @($PdfExe, $MakeIndex, $Biber, $MakeGlossaries)) {
         Write-Output "Starting PDF first pass."
-        If ($VerbosePreference -ne [System.Management.Automation.ActionPreference]::SilentlyContinue) {
-            Invoke-Expression ($PdfExe + " -interaction=nonstopmode -file-line-error -output-directory $OutputDir $MainFile") | Tee-Object -Append $LogFile | Write-Verbose
-        } Else {
-            Invoke-Expression ($PdfExe + " -interaction=batchmode -file-line-error -output-directory $OutputDir $MainFile") | Tee-Object -Append $LogFile | Write-Verbose
-        }
+        $InvExpr = $PdfExe +
+            (
+                $Interactive ? "" :
+                (
+                    $VerbosePreference -eq [System.Management.Automation.ActionPreference]::SilentlyContinue ?
+                        " -interaction=batchmode" :
+                        " -interaction=nonstopmode"
+                )
+            ) + " -file-line-error -output-directory=""$OutputDir"" $MainFile"
+        Write-Verbose "Executing $InvExpr"
+        Invoke-String $InvExpr
         If (! $Quick) {
             Write-Output "Building index."
-            Invoke-Expression ($MakeIndex + " -o $OutputDir/$MainFile.ind -t $OutputDir/$MainFile.ind.log $OutputDir/$MainFile") 2>&1 | Tee-Object -Append $LogFile | Write-Verbose
+            $InvExpr = $MakeIndex + " -o $OutputDir/$MainFile.ind -t $OutputDir/$MainFile.ind.log $OutputDir/$MainFile"
+            Invoke-String $InvExpr -RedirectErrorStream
+
             Write-Output "Building bibliography."
-            Invoke-Expression ($Biber + " --input-directory=$OutputDir --output-directory=$OutputDir $MainFile") | Tee-Object -Append $LogFile | Write-Verbose
+            $InvExpr = $Biber + " --input-directory=""$OutputDir"" --output-directory=""$OutputDir"" $MainFile"
+            Invoke-String $InvExpr
+
             Write-Output "Building glossary."
-            Invoke-Expression ($MakeGlossaries + " -d $OutputDir $MainFile") | Tee-Object -Append $LogFile | Write-Verbose
+            $InvExpr = $MakeGlossaries + " -d $OutputDir $MainFile"
+            Invoke-Expression $InvExpr | Tee-Object -Append $LogFile | Write-Verbose
+
             Write-Output "Starting PDF second pass."
-            Invoke-Expression ($PdfExe + " -interaction=nonstopmode -file-line-error -output-directory $OutputDir $MainFile") | Tee-Object -Append $LogFile | Write-Verbose
+            $InvExpr = $PdfExe +
+                ($Interactive ? "" : " -interaction=nonstopmode") +
+                " -file-line-error -output-directory=""$OutputDir"" $MainFile"
+            Invoke-String $InvExpr
+
             Write-Output "Starting PDF third pass."
-            Invoke-Expression ($PdfExe + " -interaction=nonstopmode -file-line-error -output-directory $OutputDir $MainFile") | Tee-Object -Append $LogFile | Write-Verbose
+            Invoke-String $InvExpr
+        }
+    }
+}
+
+function Invoke-String{
+    param(
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Command,
+        [switch]$RedirectErrorStream
+    )
+
+    Write-Verbose ("Executing $Command" +
+        ($RedirectErrorStream ? " with redirected error stream" : ""))
+    If ($Interactive) {
+        If ($RedirectErrorStream) {
+            Invoke-Expression $Command 2>&1 | Tee-Object -Append $LogFile
+        } Else {
+            Invoke-Expression $Command | Tee-Object -Append $LogFile
+        }
+    } Else {
+        If ($RedirectErrorStream) {
+            Invoke-Expression $Command 2>&1 | Tee-Object -Append $LogFile | Write-Verbose
+        } Else {
+            Invoke-Expression $Command | Tee-Object -Append $LogFile | Write-Verbose
         }
     }
 }
@@ -187,6 +229,292 @@ function Remove-OutDir {
         }
     } Else {
         Write-Verbose ($OutputDir + " does not exist.")
+    }
+}
+
+function Remove-TempFiles {
+    $patterns = @(
+        # Patterns taken from standard TeX .gitignore file generated by GitHub
+        ## Core latex/pdflatex auxiliary files:
+        "*.aux",
+        "*.lof",
+        "*.log",
+        "*.lot",
+        "*.fls",
+        "*.out",
+        "*.toc",
+        "*.fmt",
+        "*.fot",
+        "*.cb",
+        "*.cb2",
+        ".*.lb",
+
+        ## Intermediate documents:
+        "*.dvi",
+        "*.xdv",
+        "*-converted-to.*",
+
+        ## Generated if empty string is given at "Please type another file name for output:"
+        ".pdf",
+
+        ## Bibliography auxiliary files (bibtex/biblatex/biber):
+        "*.bbl",
+        "*.bcf",
+        "*.blg",
+        "*-blx.aux",
+        "*-blx.bib",
+        "*.run.xml",
+
+        ## Build tool auxiliary files:
+        "*.fdb_latexmk",
+        "*.synctex",
+        "*.synctex(busy)",
+        "*.synctex.gz",
+        "*.synctex.gz(busy)",
+        "*.pdfsync",
+
+        ## Auxiliary and intermediate files from other packages:
+        # algorithms
+        "*.alg",
+        "*.loa",
+
+        # achemso
+        "acs-*.bib",
+
+        # amsthm
+        "*.thm",
+
+        # beamer
+        "*.nav",
+        "*.pre",
+        "*.snm",
+        "*.vrb",
+
+        # changes
+        "*.soc",
+
+        # comment
+        "*.cut",
+
+        # cprotect
+        "*.cpt",
+
+        # elsarticle (documentclass of Elsevier journals)
+        "*.spl",
+
+        # endnotes
+        "*.ent",
+
+        # fixme
+        "*.lox",
+
+        # feynmf/feynmp
+        "*.mf",
+        "*.mp",
+        "*.t[1-9]",
+        "*.t[1-9][0-9]",
+        "*.tfm",
+
+        #(r)(e)ledmac/(r)(e)ledpar
+        "*.end",
+        "*.?end",
+        "*.[1-9]",
+        "*.[1-9][0-9]",
+        "*.[1-9][0-9][0-9]",
+        "*.[1-9]R",
+        "*.[1-9][0-9]R",
+        "*.[1-9][0-9][0-9]R",
+        "*.eledsec[1-9]",
+        "*.eledsec[1-9]R",
+        "*.eledsec[1-9][0-9]",
+        "*.eledsec[1-9][0-9]R",
+        "*.eledsec[1-9][0-9][0-9]",
+        "*.eledsec[1-9][0-9][0-9]R",
+
+        # glossaries
+        "*.acn",
+        "*.acr",
+        "*.glg",
+        "*.glo",
+        "*.gls",
+        "*.glsdefs",
+        "*.lzo",
+        "*.lzs",
+
+        # uncomment this for glossaries-extra (will ignore makeindex's style files!)
+        # "*.ist",
+
+        # gnuplottex
+        "*-gnuplottex-*",
+
+        # gregoriotex
+        "*.gaux",
+        "*.gtex",
+
+        # htlatex
+        "*.4ct",
+        "*.4tc",
+        "*.idv",
+        "*.lg",
+        "*.trc",
+        "*.xref",
+
+        # hyperref
+        "*.brf",
+
+        # knitr
+        "*-concordance.tex",
+        # TODO Comment the next line if you want to keep your tikz graphics files
+        "*.tikz",
+        "*-tikzDictionary",
+
+        # listings
+        "*.lol",
+
+        # luatexja-ruby
+        "*.ltjruby",
+
+        # makeidx
+        "*.idx",
+        "*.ilg",
+        "*.ind",
+
+        # minitoc
+        "*.maf",
+        "*.mlf",
+        "*.mlt",
+        "*.mtc[0-9]*",
+        "*.slf[0-9]*",
+        "*.slt[0-9]*",
+        "*.stc[0-9]*",
+
+        # minted
+        "_minted*",
+        "*.pyg",
+
+        # morewrites
+        "*.mw",
+
+        # nomencl
+        "*.nlg",
+        "*.nlo",
+        "*.nls",
+
+        # pax
+        "*.pax",
+
+        # pdfpcnotes
+        "*.pdfpc",
+
+        # sagetex
+        "*.sagetex.sage",
+        "*.sagetex.py",
+        "*.sagetex.scmd",
+
+        # scrwfile
+        "*.wrt",
+
+        # sympy
+        "*.sout",
+        "*.sympy",
+        "sympy-plots-for-*.tex/",
+
+        # pdfcomment
+        "*.upa",
+        "*.upb",
+
+        # pythontex
+        "*.pytxcode",
+        "pythontex-files-*/",
+
+        # tcolorbox
+        "*.listing",
+
+        # thmtools
+        "*.loe",
+
+        # TikZ & PGF
+        "*.dpth",
+        "*.md5",
+        "*.auxlock",
+
+        # todonotes
+        "*.tdo",
+
+        # vhistory
+        "*.hst",
+        "*.ver",
+
+        # easy-todo
+        "*.lod",
+
+        # xcolor
+        "*.xcp",
+
+        # xmpincl
+        "*.xmpi",
+
+        # xindy
+        "*.xdy",
+
+        # xypic precompiled matrices and outlines
+        "*.xyc",
+        "*.xyd",
+
+        # endfloat
+        "*.ttt",
+        "*.fff",
+
+        # Latexian
+        "TSWLatexianTemp*",
+
+        ## Editors:
+        # WinEdt
+        "*.bak",
+        "*.sav",
+
+        # Texpad
+        ".texpadtmp",
+
+        # LyX
+        "*.lyx~",
+
+        # Kile
+        "*.backup",
+
+        # gummi
+        ".*.swp",
+
+        # KBibTeX
+        "*~[0-9]*",
+
+        # TeXnicCenter
+        "*.tps",
+
+        # auto folder when using emacs and auctex
+        "./auto/*",
+        "*.el",
+
+        # expex forward references with \gathertags
+        "*-tags.tex",
+
+        # standalone packages
+        "*.sta",
+
+        # Makeindex log files
+        "*.lpz"
+    )
+
+    ForEach ($p In $patterns) {
+        Write-Verbose "Deleting $p."
+        Get-ChildItem * -Include $p -Recurse | Remove-Item
+    }
+
+    # Remove HTML files at project root
+    $patterns = @("*.css", "*.html", "*.out.ps", "*.tmp", "*.svg")
+    ForEach ($p In $patterns) {
+        Write-Verbose "Deleting $p (project root only)."
+        Get-ChildItem * -Include $p | Remove-Item
     }
 }
 
@@ -215,11 +543,12 @@ $Ext = [System.IO.Path]::GetExtension($MainFile)
 If ([string]::IsNullOrWhiteSpace($Ext)) {
     $Ext = ".tex"
 }
+$LogFile = $OutDir + "\build.log"
 $MainFileFullPath = Resolve-Path ($MainFile + $Ext)
 $MainFileLocation = Split-Path $MainFileFullPath
 $MainFile = [System.IO.Path]::GetFileNameWithoutExtension($MainFileFullPath)
 $OutDir = "./latex.out"
-$LogFile = $OutDir + "\build.log"
+$StartLocation = Get-Location
 
 Write-Verbose "Main file is ${MainFileFullPath}."
 Write-Verbose "Main file located at ${MainFileLocation}."
@@ -236,10 +565,11 @@ If ($All) {
 }
 
 If ($Clean) {
-    Remove-OutDir $OutDir
+    Remove-TempFiles
 }
 
 If ($Pdf) {
     Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile -Quick:$Quick
 }
 
+Set-Location $StartLocation
