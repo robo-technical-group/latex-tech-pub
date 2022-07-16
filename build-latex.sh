@@ -10,7 +10,7 @@
 # - [X] Return to original working directory after work has finished.
 # - [X] Use `latexmk` if available.
 # - [X] Rename to `build-latex` to allow placement in PATH.
-# - [ ] Support LuaLaTeX.
+# - [X] Support LuaLaTeX.
 ######################################################################
 # BSD 3-Clause License
 #
@@ -46,6 +46,7 @@
 # Locating binaries; adjust for your system if necessary.
 readonly biber=$(which biber)
 readonly latexmk=$(which latexmk)
+readonly lualatex=$(which lualatex)
 readonly makeglossaries=$(which makeglossaries)
 readonly makeindex=$(which makeindex)
 readonly pdflatex=$(which pdflatex)
@@ -60,6 +61,7 @@ epub=0
 figs=0
 html=0
 interactive=0
+luatex=0
 mainfile=main
 outdir=./latex.out
 pdf=0
@@ -86,6 +88,10 @@ build_pdf_latexmk() {
     then
         pdf="-pdfxe"
     fi
+    if [ $luatex -eq 1 ]
+    then
+        pdf="-pdflua"
+    fi
     if [ $interactive -eq 0 ]
     then
         if [ $DEBUG -eq 0 ]
@@ -106,6 +112,10 @@ build_pdf_pdflatex() {
     if [ $xetex -eq 1 ]
     then
         pdfbin=$xelatex
+    fi
+    if [ $luatex -eq 1 ]
+    then
+        pdfbin=$lualatex
     fi
     test_exes "tree pdfbin makeindex makeglossaries biber"
     retval=$?
@@ -216,6 +226,8 @@ print_help() {
     echo "    Builds the web site files."
     echo "  -i, --interactive"
     echo "    Run programs in interactive mode."
+    echo "  -l, --luatex"
+    echo "    Use LuaTeX engine instead of LaTeX engine."
     echo "  -p, --pdf"
     echo "    Builds the PDF file."
     echo "  -q, --quick"
@@ -223,7 +235,7 @@ print_help() {
     echo "  -v, --debug, --verbose"
     echo "    Output additional information during build."
     echo "  -x, -xetex"
-    echo "    Use XeLaTeX engine instead of PdfLaTex engine for PDF output."
+    echo "    Use XeTeX engine instead of LaTeX engine."
     echo "  -?, --help"
     echo "    Displays this information."
 }
@@ -576,6 +588,10 @@ do
 
     -i|--interactive)
         interactive=1
+        ;;
+
+    -l|--luatex)
+        luatex=1
         ;;
 
     -p|--pdf)

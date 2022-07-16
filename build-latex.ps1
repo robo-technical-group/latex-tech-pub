@@ -29,6 +29,9 @@ Builds the web site files.
 .PARAMETER Interactive
 Runs the LaTeX executables in interactive mode.
 
+.PARAMETER Luatex
+Use LuaTeX engine instead of LaTeX engine.
+
 .PARAMETER Pdf
 Builds the PDF file.
 
@@ -36,14 +39,14 @@ Builds the PDF file.
 Runs just one pass of pdflatex, et al.
 
 .PARAMETER Xetex
-Use XeLaTeX engine instead of PdfLaTex engine for PDF output.
+Use XeTeX engine instead of LaTeX engine.
 #>
 
 ######################################################################
 # 2022-Jun-20 Initial version.
 # 2022-Jun-26 Repackage as a single script with functions.
 # 2022-Jul-12 Add interactive mode; return to original work directory.
-# 2022-Jul-16 Support `latexmk`.
+# 2022-Jul-16 Support `latexmk` and LuaLaTeX.
 ######################################################################
 # TODO
 # - [X] Add -clean -figures -pdf -epub -html switches.
@@ -62,7 +65,7 @@ Use XeLaTeX engine instead of PdfLaTex engine for PDF output.
 # - [X] Return to original working directory after work has finished.
 # - [X] Use `latexmk` if available.
 # - [X] Rename to `build-latex` to allow placement in PATH.
-# - [ ] Support LuaLaTeX.
+# - [X] Support LuaLaTeX.
 ######################################################################
 # BSD 3-Clause License
 #
@@ -106,6 +109,7 @@ param (
     [switch]$Pdf,
     [switch]$Epub,
     [switch]$Html,
+    [switch]$Luatex,
     [switch]$Quick,
     [switch]$Xetex
 )
@@ -114,6 +118,7 @@ param (
 # Modify (e.g. supply full path) as needed for executables not located in your path.
 Set-Variable Biber -Option ReadOnly -Value "biber"
 Set-Variable LatexMk -Option ReadOnly -Value "latexmk"
+Set-Variable LuaLatex -Option ReadOnly -Value "lualatex"
 Set-Variable MakeGlossaries -Option ReadOnly -Value "makeglossaries"
 Set-Variable MakeIndex -Option ReadOnly -Value "makeindex"
 Set-Variable PdfLatex -Option ReadOnly -Value "pdflatex"
@@ -154,7 +159,7 @@ function Build-Pdf-LatexMk {
     )
 
     $InvExpr = $LatexMk +
-        ($Xetex ? " -pdfxe" : " -pdf") +
+        ($Xetex ? " -pdfxe" : ($Luatex ? " -pdflua" : " -pdf")) +
         (
             $VerbosePreference -eq [System.Management.Automation.ActionPreference]::SilentlyContinue ?
             "" :
@@ -186,7 +191,7 @@ function Build-Pdf-PdfLatex {
         [switch] $Quick
     )
 
-    $PdfExe = $Xetex ? $XeLatex : $PdfLatex
+    $PdfExe = $Xetex ? $XeLatex : ($Luatex ? $LuaLatex : $PdfLatex)
     $InvExpr = ""
     If (Test-Executables @($PdfExe, $MakeIndex, $Biber, $MakeGlossaries)) {
         Write-Output "Starting PDF first pass."
