@@ -43,6 +43,7 @@ Use XeLaTeX engine instead of PdfLaTex engine for PDF output.
 # 2022-Jun-20 Initial version.
 # 2022-Jun-26 Repackage as a single script with functions.
 # 2022-Jul-12 Add interactive mode; return to original work directory.
+# 2022-Jul-16 Support `latexmk`.
 ######################################################################
 # TODO
 # - [X] Add -clean -figures -pdf -epub -html switches.
@@ -59,8 +60,9 @@ Use XeLaTeX engine instead of PdfLaTex engine for PDF output.
 # - [X] Move executable names into variables to allow for alternate
 #       specification (e.g. executable not in path).
 # - [X] Return to original working directory after work has finished.
-# - [ ] Use `latexmk` if available.
-# - [ ] Rename to `build-latex` to allow placement in PATH.
+# - [X] Use `latexmk` if available.
+# - [X] Rename to `build-latex` to allow placement in PATH.
+# - [ ] Support LuaLaTeX.
 ######################################################################
 # BSD 3-Clause License
 #
@@ -111,15 +113,13 @@ param (
 # Executables
 # Modify (e.g. supply full path) as needed for executables not located in your path.
 Set-Variable Biber -Option ReadOnly -Value "biber"
+Set-Variable LatexMk -Option ReadOnly -Value "latexmk"
 Set-Variable MakeGlossaries -Option ReadOnly -Value "makeglossaries"
 Set-Variable MakeIndex -Option ReadOnly -Value "makeindex"
 Set-Variable PdfLatex -Option ReadOnly -Value "pdflatex"
 Set-Variable XeLatex -Option ReadOnly -Value "xelatex"
 
 # Functions
-
-# TODO
-# - [X] Add -quick switch (just run one pass of pdflatex)
 function Build-Pdf {
     param (
         [Parameter(Mandatory,Position=0)]
@@ -131,23 +131,60 @@ function Build-Pdf {
         [string] $OutputDir,
         [switch] $Quick
     )
+
+    Build-OutputDir $OutputDir
+
+    If (Test-Executables @($LatexMk)) {
+        Build-Pdf-LatexMk $MainFile -OutputDir $OutputDir -Quick:$Quick
+    } Else {
+        Build-Pdf-PdfLatex $MainFile -OutputDir $OutputDir -Quick:$Quick
+    }
+}
+
+function Build-Pdf-LatexMk {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
     
-    If (!(Test-Path $OutputDir)) {
-        New-Item $OutputDir -ItemType Directory
-    }
-    If (!(Test-Path $OutputDir)) {
-        Write-Output ("Cannot create output directory" + $OutputDir + "; aborting.")
-        Exit 1
-    }
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir,
+        [switch] $Quick
+    )
+
+    $InvExpr = $LatexMk +
+        ($Xetex ? " -pdfxe" : " -pdf") +
+        (
+            $VerbosePreference -eq [System.Management.Automation.ActionPreference]::SilentlyContinue ?
+            "" :
+            " -verbose"
+        ) +
+        (
+            $Interactive ? "" :
+            (
+                $VerbosePreference -eq [System.Management.Automation.ActionPreference]::SilentlyContinue ?
+                    " -interaction=batchmode" :
+                    " -interaction=nonstopmode"
+            )
+        ) + 
+        " -file-line-error -output-directory=""$OutputDir"" $MainFile"
+    Invoke-String $InvExpr
+}
+
+# TODO
+# - [X] Add -quick switch (just run one pass of pdflatex)
+function Build-Pdf-PdfLatex {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
     
-    Write-Verbose "Duplicate folder structure so that pdflatex can output .aux files."
-    ForEach ($dir in (Get-ChildItem -Directory -Path $MainFileLocation)) {
-        If ($dir.Name -ne "latex.out") {
-            Write-Verbose "Duplicating folder $dir to output directory $OutputDir."
-            # -Force removes errors when a directory already exists.
-            Copy-Item $dir.FullName $OutputDir -Filter {PSIsContainer} -Recurse -Force
-        }
-    }
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir,
+        [switch] $Quick
+    )
 
     $PdfExe = $Xetex ? $XeLatex : $PdfLatex
     $InvExpr = ""
@@ -162,7 +199,6 @@ function Build-Pdf {
                         " -interaction=nonstopmode"
                 )
             ) + " -file-line-error -output-directory=""$OutputDir"" $MainFile"
-        Write-Verbose "Executing $InvExpr"
         Invoke-String $InvExpr
         If (! $Quick) {
             Write-Output "Building index."
@@ -189,7 +225,32 @@ function Build-Pdf {
     }
 }
 
-function Invoke-String{
+function Build-OutputDi {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    If (!(Test-Path $OutputDir)) {
+        New-Item $OutputDir -ItemType Directory
+    }
+    If (!(Test-Path $OutputDir)) {
+        Write-Output ("Cannot create output directory" + $OutputDir + "; aborting.")
+        Exit 1
+    }
+    
+    Write-Verbose "Duplicate folder structure so that pdflatex can output .aux files."
+    ForEach ($dir in (Get-ChildItem -Directory -Path $MainFileLocation)) {
+        If ($dir.Name -ne "latex.out") {
+            Write-Verbose "Duplicating folder $dir to output directory $OutputDir."
+            # -Force removes errors when a directory already exists.
+            Copy-Item $dir.FullName $OutputDir -Filter {PSIsContainer} -Recurse -Force
+        }
+    }
+}
+
+function Invoke-String {
     param(
         [Parameter(Mandatory,Position=0)]
         [ValidateNotNullOrEmpty()]

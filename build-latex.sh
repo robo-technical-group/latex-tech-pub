@@ -8,8 +8,9 @@
 # - [X] Add interactive mode.
 # - [X] Support XeLaTex.
 # - [X] Return to original working directory after work has finished.
-# - [ ] Use `latexmk` if available.
-# - [ ] Rename to `build-latex` to allow placement in PATH.
+# - [X] Use `latexmk` if available.
+# - [X] Rename to `build-latex` to allow placement in PATH.
+# - [ ] Support LuaLaTeX.
 ######################################################################
 # BSD 3-Clause License
 #
@@ -44,6 +45,7 @@
 
 # Locating binaries; adjust for your system if necessary.
 readonly biber=$(which biber)
+readonly latexmk=$(which latexmk)
 readonly makeglossaries=$(which makeglossaries)
 readonly makeindex=$(which makeindex)
 readonly pdflatex=$(which pdflatex)
@@ -68,6 +70,37 @@ xetex=0
 
 build_pdf() {
     local outdir="$1"
+    build_outputdir "$outdir"
+    if [ ! -z "$latexmk" -a -x "$latexmk" ]
+    then
+        build_pdf_latexmk "$outdir"
+    else
+        build_pdf_pdflatex "$outdir"
+    fi
+}
+
+build_pdf_latexmk() {
+    local outdir="$1"
+    local pdf="-pdf"
+    if [ $xetex -eq 1 ]
+    then
+        pdf="-pdfxe"
+    fi
+    if [ $interactive -eq 0 ]
+    then
+        if [ $DEBUG -eq 0 ]
+        then
+            $latexmk $pdf -interaction=batchmode -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
+        else
+            $latexmk $pdf -interaction=nonstopmode -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
+        fi
+    else
+        $latexmk $pdf -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
+    fi
+}
+
+build_pdf_pdflatex() {
+    local outdir="$1"
     local retval=0
     local pdfbin=$pdflatex
     if [ $xetex -eq 1 ]
@@ -81,32 +114,17 @@ build_pdf() {
         return $retval
     fi
 
-    [ ! -d "$1" ] && mkdir -p "$1"
-    if [ ! -d "$1" ]
-    then
-        echo "Unable to create output directory ${outdir}; aborting."
-        return 1
-    fi
-
-    for d in $(ls -d */) ;
-    do
-        if [ "$d" != "latex.out/" ]
-        then
-            tree -dfi --noreport "$d" | xargs -I{} mkdir -p "${outdir}/{}"
-        fi
-    done
-
     echo "Starting PDF first pass." | tee $logfile
     if [ $interactive -eq 0 ]
     then
         if [ $DEBUG -eq 0 ]
         then
-            $pdfbin -interaction=batchmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            $pdfbin -interaction=batchmode -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
         else
-            $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            $pdfbin -interaction=nonstopmode -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
         fi
     else
-        $pdfbin -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+        $pdfbin -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
     fi
 
     if [ $quick -eq 0 ]
@@ -140,12 +158,12 @@ build_pdf() {
         then
             if [ $DEBUG -eq 0 ]
             then
-                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile >> $logfile
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory="$outdir" $mainfile >> $logfile
             else
-                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
             fi
         else
-            $pdfbin -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            $pdfbin -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
         fi
 
         echo "Starting PDF third pass." | tee -a $logfile
@@ -153,14 +171,33 @@ build_pdf() {
         then
             if [ $DEBUG -eq 0 ]
             then
-                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile >> $logfile
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory="$outdir" $mainfile >> $logfile
             else
-                $pdfbin -interaction=nonstopmode -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+                $pdfbin -interaction=nonstopmode -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
             fi
         else
-            $pdfbin -file-line-error -output-directory "$outdir" $mainfile | tee -a $logfile
+            $pdfbin -file-line-error -output-directory="$outdir" $mainfile | tee -a $logfile
         fi
     fi
+}
+
+build_outputdir() {
+    local outdir="$1"
+
+    [ ! -d "$outdir" ] && mkdir -p "$outdir"
+    if [ ! -d "$outdir" ]
+    then
+        echo "Unable to create output directory ${outdir}; aborting."
+        return 1
+    fi
+
+    for d in $(ls -d */) ;
+    do
+        if [ "$d" != "latex.out/" ]
+        then
+            tree -dfi --noreport "$d" | xargs -I{} mkdir -p "${outdir}/{}"
+        fi
+    done
 }
 
 print_help() {
