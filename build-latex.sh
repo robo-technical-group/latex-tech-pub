@@ -4,21 +4,6 @@
 # Build multiple LaTeX targets from a single source.
 # Run ./build.sh --help for more information.
 ######################################################################
-# TODO
-# - [X] Add interactive mode.
-# - [X] Support XeLaTex.
-# - [X] Return to original working directory after work has finished.
-# - [X] Use `latexmk` if available.
-# - [X] Rename to `build-latex` to allow placement in PATH.
-# - [X] Support LuaLaTeX.
-# - [ ] Support pandoc as alternative for HTML and ePub output.
-# - [ ] Model --clean routine on PowerShell version.
-# - [ ] Support multiple main files with suffixes
-#   - [ ] For print-ready PDF, look for -print.tex then -pdf.tex
-#   - [ ] For PDF, look for -pdf.tex
-#   - [ ] For ePub, look for -epub.tex then -web.tex
-#   - [ ] For HTML, look for -web.tex
-######################################################################
 # BSD 3-Clause License
 #
 # Copyright (c) 2022, Robo Technical Group, LLC

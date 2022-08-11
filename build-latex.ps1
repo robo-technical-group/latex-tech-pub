@@ -43,36 +43,6 @@ Use XeTeX engine instead of LaTeX engine.
 #>
 
 ######################################################################
-# 2022-Jun-20 Initial version.
-# 2022-Jun-26 Repackage as a single script with functions.
-# 2022-Jul-12 Add interactive mode; return to original work directory.
-# 2022-Jul-16 Support `latexmk` and LuaLaTeX.
-######################################################################
-# TODO
-# - [X] Add -clean -figures -pdf -epub -html switches.
-# - [X] Do not automatically clean the output directory.
-# - [X] Rename to `build.ps1`.
-# - [X] Remove bin directory; incorporate as functions instead.
-# - [X] Remove -contentdir option;
-#       automatically duplicate directory structure;
-#       ignore latex.out directory.
-# - [X] Verify access to required executables.
-# - [X] Add interactive mode.
-# - [X] Support XeLaTeX.
-# - [X] Remove Start-Process; revert to direct calls.
-# - [X] Move executable names into variables to allow for alternate
-#       specification (e.g. executable not in path).
-# - [X] Return to original working directory after work has finished.
-# - [X] Use `latexmk` if available.
-# - [X] Rename to `build-latex` to allow placement in PATH.
-# - [X] Support LuaLaTeX.
-# - [ ] Support pandoc as alternative for HTML and ePub output.
-# - [ ] Support multiple main files with suffixes
-#   - [ ] For print-ready PDF, look for -print.tex then -pdf.tex
-#   - [ ] For PDF, look for -pdf.tex
-#   - [ ] For ePub, look for -epub.tex then -web.tex
-#   - [ ] For HTML, look for -web.tex
-######################################################################
 # BSD 3-Clause License
 #
 # Copyright (c) 2022, Robo Technical Group, LLC
