@@ -66,6 +66,12 @@ Use XeTeX engine instead of LaTeX engine.
 # - [X] Use `latexmk` if available.
 # - [X] Rename to `build-latex` to allow placement in PATH.
 # - [X] Support LuaLaTeX.
+# - [ ] Support pandoc as alternative for HTML and ePub output.
+# - [ ] Support multiple main files with suffixes
+#   - [ ] For print-ready PDF, look for -print.tex then -pdf.tex
+#   - [ ] For PDF, look for -pdf.tex
+#   - [ ] For ePub, look for -epub.tex then -web.tex
+#   - [ ] For HTML, look for -web.tex
 ######################################################################
 # BSD 3-Clause License
 #
@@ -230,7 +236,7 @@ function Build-Pdf-PdfLatex {
     }
 }
 
-function Build-OutputDi {
+function Build-OutputDir {
     param (
         [Parameter(Mandatory,Position=0)]
         [ValidateNotNullOrEmpty()]
@@ -408,7 +414,7 @@ function Remove-TempFiles {
         "*.lzs",
 
         # uncomment this for glossaries-extra (will ignore makeindex's style files!)
-        # "*.ist",
+        "*.ist",
 
         # gnuplottex
         "*-gnuplottex-*",
@@ -576,11 +582,20 @@ function Remove-TempFiles {
         Get-ChildItem * -Include $p -Recurse | Remove-Item
     }
 
-    # Remove HTML files at project root
-    $patterns = @("*.css", "*.html", "*.out.ps", "*.tmp", "*.svg")
+    # Remove HTML and eBook files at project root
+    $patterns = @("*.css", "*.epub", "*.epub3,", "*.mobi", "*.html",
+        "*.ncx", "content.opf", "*.out.ps", "*.png", "*.tmp", "*.svg",
+        "*.xhtml")
     ForEach ($p In $patterns) {
         Write-Verbose "Deleting $p (project root only)."
         Get-ChildItem * -Include $p | Remove-Item
+    }
+
+    # Remove eBook folders
+    $patterns = @("*-epub3", "*-epub", "*-mobi")
+    ForEach ($p in $patterns) {
+        Write-Verbose "Deleting $p folders (project root only)."
+        Get-ChildItem * -Filter $p | Remove-Item -Recurse -Force
     }
 }
 
@@ -604,6 +619,11 @@ function Test-Executables {
 
 # Main
 
+If (-Not((Test-Path $MainFile -PathType Leaf) -or (Test-Path ($MainFile + ".tex") -PathType Leaf))) {
+    Write-Error "Main file '$MainFile' does not exist; aborting."
+    Exit 1
+}
+
 # Other global variables
 $Ext = [System.IO.Path]::GetExtension($MainFile)
 If ([string]::IsNullOrWhiteSpace($Ext)) {
@@ -615,6 +635,12 @@ $MainFileLocation = Split-Path $MainFileFullPath
 $MainFile = [System.IO.Path]::GetFileNameWithoutExtension($MainFileFullPath)
 $OutDir = "./latex.out"
 $StartLocation = Get-Location
+
+# Last test before starting
+If (-Not(Test-Path $MainFileFullPath -PathType Leaf)) {
+    Write-Error "Main file '$MainFileFullPath' does not exist; aborting."
+    Exit 1
+}
 
 Write-Verbose "Main file is ${MainFileFullPath}."
 Write-Verbose "Main file located at ${MainFileLocation}."

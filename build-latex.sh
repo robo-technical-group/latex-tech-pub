@@ -11,6 +11,13 @@
 # - [X] Use `latexmk` if available.
 # - [X] Rename to `build-latex` to allow placement in PATH.
 # - [X] Support LuaLaTeX.
+# - [ ] Support pandoc as alternative for HTML and ePub output.
+# - [ ] Model --clean routine on PowerShell version.
+# - [ ] Support multiple main files with suffixes
+#   - [ ] For print-ready PDF, look for -print.tex then -pdf.tex
+#   - [ ] For PDF, look for -pdf.tex
+#   - [ ] For ePub, look for -epub.tex then -web.tex
+#   - [ ] For HTML, look for -web.tex
 ######################################################################
 # BSD 3-Clause License
 #
@@ -620,6 +627,12 @@ do
     GA_getarg
 done
 
+if [ ! -e $mainfile -a ! -e ${mainfile}.tex ]
+then
+    echo "Main file '${mainfile}' does not exist; aborting."
+    exit 1
+fi
+
 mainfile=$(get_full_path $mainfile)
 splitPath $mainfile mainfilelocation fn mainfile ext
 if [ -z "$ext" ]
@@ -630,6 +643,13 @@ fi
 mainfilefullpath=${mainfilelocation}/$fn
 logfile="${outdir}/build.log"
 cd "$mainfilelocation"
+
+# Last test before starting
+if [ ! -e $mainfilefullpath ]
+then
+    echo " Main file '${mainfilefullpath}' does not exist; aborting."
+    exit 1
+fi
 
 if [ $clean -eq 1 -a -e $outdir ]
 then
