@@ -48,7 +48,7 @@ Displays the help file with all of the available options.
 | ePub3 build (pandoc) | 00.00.05 | 00.00.05 |
 | HTML build (make4ht) | 00.00.05 | 00.00.05 |
 | HTML build (pandoc) | 00.00.05 | 00.00.05 |
-| Markdown build | | |
+| Markdown build | 00.00.05 | 00.00.05 |
 | Return to original directory when done | 00.00.03 | 00.00.03 |
 | pandoc option | 00.00.05 | 00.00.05 |
 | Support configuration file for alternate binary locatinos | | |

@@ -12,7 +12,7 @@ Output files are located in the latex.out directory.
 Main TeX file to compile.
 
 .PARAMETER All
-Same as --figures --pdf --epub --html.
+Same as --figures --pdf --epub --html --markdown.
 
 .PARAMETER Clean
 Deletes the output directory before building.
@@ -31,6 +31,12 @@ Runs the LaTeX executables in interactive mode.
 
 .PARAMETER Luatex
 Use LuaTeX engine instead of LaTeX engine.
+
+.PARAMETER Markdown
+Builds MarkDown files.
+
+.PARAMETER Pandoc
+Use Pandoc when creating web sites and e-books.
 
 .PARAMETER Pdf
 Builds the PDF file.
@@ -90,6 +96,7 @@ param (
     [switch]$Epub,
     [switch]$Html,
     [switch]$Luatex,
+    [switch]$Markdown,
     [switch]$Quick,
     [switch]$Xetex,
     [switch]$Web
@@ -142,9 +149,9 @@ function Build-Ebook-Pandoc {
 
     If (Test-Executables @($PandocExe)) {
         $ConfigFile = "pandoc-epub.yaml"
-        $InvExpr = "pandoc --from=latex --to=epub3 --output=""" + $OutputDir + "/" + $MainFile + ".epub"" " + (
+        $InvExpr = "pandoc --from=latex --output=""" + $OutputDir + "/" + $MainFile + ".epub"" " + (
             (Test-Path $ConfigFile) ? ("--defaults=" + $ConfigFile + " ")
-            : "--mathml "
+            : "--mathml --to=epub3 "
         ) + $MainFile + ".tex"
 
         Write-Output "Building e-book."
@@ -177,6 +184,30 @@ function Build-Ebook-Tex4Ebook {
             Write-Verbose "Moving ePub file to output directory."
             Move-Item $EpubFile (Join-Path $OutputDir $EpubFile) -Force
         }
+    }
+}
+
+function Build-Markdown {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    Build-OutputDir $OutputDir -NoRecurse
+    If (Test-Executables @($PandocExe)) {
+        $ConfigFile = "pandoc-md.yaml"
+        $InvExpr = "pandoc --from=latex --output=""" + $OutputDir + "/" + $MainFile + ".md"" " + (
+            (Test-Path $ConfigFile) ? ("--defaults=" + $ConfigFile + " ")
+            : "--to=markdown "
+        ) + $MainFile + ".tex"
+
+        Write-Output "Building markdown files."
+        Invoke-String $InvExpr
     }
 }
 
@@ -787,6 +818,10 @@ If ($Web) {
 
 If ($Epub) {
     Build-Ebook -OutputDir ($OutDir + "/epub") $MainFile
+}
+
+If ($Markdown) {
+    Build-Markdown -OutputDir ($OutDir + "/md") $MainFile
 }
 
 Set-Location $StartLocation

@@ -59,6 +59,7 @@ html=0
 interactive=0
 luatex=0
 mainfile=main
+markdown=0
 outdir=./latex.out
 pandoc=0
 pdf=0
@@ -96,16 +97,16 @@ build_epub_pandoc() {
     then
         if [ $DEBUG -eq 0 ]
         then
-            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
+            $pandocbin --from=latex --output="${outdir}/${mainfile}.epub" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
         else
-            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --defaults=$config ${mainfile}.tex | tee -a $logfile
+            $pandocbin --from=latex --output="${outdir}/${mainfile}.epub" --defaults=$config ${mainfile}.tex | tee -a $logfile
         fi
     else
         if [ $DEBUG -eq 0 ]
         then
-            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --mathml ${mainfile}.tex >> $logfile 2>&1
+            $pandocbin --from=latex --to=epub3 --output="${outdir}/${mainfile}.epub" --mathml ${mainfile}.tex >> $logfile 2>&1
         else
-            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --mathml ${mainfile}.tex | tee -a $logfile
+            $pandocbin --from=latex --to=epub3 --output="${outdir}/${mainfile}.epub" --mathml ${mainfile}.tex | tee -a $logfile
         fi
     fi
 }
@@ -148,6 +149,37 @@ build_epub_tex4ebook() {
             echo "Moving ePub file to output directory."
         fi
         mv "$epubfile" "$outdir"/
+    fi
+}
+
+build_markdown() {
+    local outdir="$1"
+    local retval=0
+    test_exes "pandocbin"
+    retval=$?
+    if [ $retval -gt 0 ]
+    then
+        return $retval
+    fi
+
+    build_outputdir "$outdir" 1
+    local config="pandoc-md.yaml"
+    echo "Building Markdown files." | tee -a $logfile
+    if [ -e "$config" ]
+    then
+        if [ $DEBUG -eq 0 ]
+        then
+            $pandocbin --from=latex --output="${outdir}/${mainfile}.md" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
+        else
+            $pandocbin --from=latex --output="${outdir}/${mainfile}.md" --defaults=$config ${mainfile}.tex | tee -a $logfile
+        fi
+    else
+        if [ $DEBUG -eq 0 ]
+        then
+            $pandocbin --from=latex --to=markdown --output="${outdir}/${mainfile}.epub" ${mainfile}.tex >> $logfile 2>&1
+        else
+            $pandocbin --from=latex --to=markdown --output="${outdir}/${mainfile}.epub" ${mainfile}.tex | tee -a $logfile
+        fi
     fi
 }
 
@@ -359,16 +391,16 @@ build_web_pandoc() {
     then
         if [ $DEBUG -eq 0 ]
         then
-            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
+            $pandocbin --from=latex --to=html5 --output="${outdir}/${mainfile}.html" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
         else
-            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --defaults=$config ${mainfile}.tex | tee -a $logfile
+            $pandocbin --from=latex --to=html5 --output="${outdir}/${mainfile}.html" --defaults=$config ${mainfile}.tex | tee -a $logfile
         fi
     else
         if [ $DEBUG -eq 0 ]
         then
-            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --standalone --mathjax ${mainfile}.tex >> $logfile 2>&1
+            $pandocbin --from=latex --to=html5 --output="${outdir}/${mainfile}.html" --standalone --mathjax ${mainfile}.tex >> $logfile 2>&1
         else
-            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --standalone --mathjax ${mainfile}.tex | tee -a $logfile
+            $pandocbin --from=latex --to=html5 --output="${outdir}/${mainfile}.html" --standalone --mathjax ${mainfile}.tex | tee -a $logfile
         fi
     fi
 }
@@ -391,6 +423,8 @@ print_help() {
     echo "    Run programs in interactive mode."
     echo "  -l, --luatex"
     echo "    Use LuaTeX engine instead of LaTeX engine."
+    echo "  -m, --markdown"
+    echo "    Build Markdown files."
     echo "  -p, --pdf"
     echo "    Builds the PDF file."
     echo "  -q, --quick"
@@ -723,6 +757,7 @@ do
         pdf=1
         epub=1
         web=1
+        markdown=1
         ;;
 
     -c|--content-dir)
@@ -758,6 +793,10 @@ do
 
     -l|--luatex)
         luatex=1
+        ;;
+
+    -m|--markdown)
+        markdown=1
         ;;
 
     -p|--pdf)
@@ -840,6 +879,11 @@ fi
 if [ $epub -eq 1 ]
 then
     build_epub "${outdir}/epub"
+fi
+
+if [ $md -eq 1 ]
+then
+    build_markdown "${outdir}/md"
 fi
 
 cd "$cwd"
