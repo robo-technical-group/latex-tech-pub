@@ -41,8 +41,11 @@ Displays the help file with all of the available options.
 | ... Index | 00.00.01 | 00.00.01 |
 | ... Glossary | 00.00.01 | 00.00.01 |
 | PDF build | 00.00.01 | 00.00.01 |
-| ePub3 build | | |
-| HTML build | | |
+| ePub3 build (tex4ebook) | | |
+| ePub3 build (pandoc) | | |
+| HTML build (make4ht) | | |
+| HTML build (pandoc) | | |
+| Markdown build | | |
 | Return to original directory when done | 00.00.03 | 00.00.03 |
 | pandoc option for ePub3 and HTML | | |
 | Support configuration file for alternate binary locatinos | | |
@@ -50,6 +53,7 @@ Displays the help file with all of the available options.
 | ...For print-ready PDF, look for -print.tex then -pdf.tex | | |
 | ...For PDF, look for -pdf.tex | | |
 | ...For ePub, look for -epub.tex then -web.tex | | |
+| ...For Markdown, look for -md.tex then -web.tex | | |
 | ...For HTML, look for -web.tex | | |
 | Model --clean routine after PowerShell version | N/A | |
 | Allow --help to be called without requiring main file | N/A | |
