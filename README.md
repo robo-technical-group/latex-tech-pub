@@ -24,6 +24,20 @@ Builds PDF, HTML, and ePub documents from the `main.tex` file.
 
 Displays the help file with all of the available options.
 
+# Software used
+
+## Required software
+
+- `pdflatex`, `biber`, and `makeglossaries` for PDF output
+- `pandoc` or `tex4ebook` for ePub output
+- `pandoc` or `make4ht` for HTML output
+- `pandoc` for Markdown output
+
+## Optional software
+
+- `latexmk` for PDF output (used by default if found in path)
+- `tidy` for ePub and HTML output
+
 # Changelog
 
 | Release | Date | Author | Changes |
@@ -51,7 +65,7 @@ Displays the help file with all of the available options.
 | Markdown build | 00.00.05 | 00.00.05 |
 | Return to original directory when done | 00.00.03 | 00.00.03 |
 | pandoc option | 00.00.05 | 00.00.05 |
-| Support configuration file for alternate binary locatinos | | |
+| Support configuration file for alternate binary locations | | |
 | Support multiple main files with suffixes | | |
 | ...For print-ready PDF, look for -print.tex then -pdf.tex | | |
 | ...For PDF, look for -pdf.tex | | |
