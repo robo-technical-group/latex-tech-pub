@@ -28,7 +28,7 @@ Displays the help file with all of the available options.
 
 | Release | Date | Author | Changes |
 | --- | --- | --- | --- |
-| 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites, ePubs, and Markdown files. |
+| 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites, ePubs, and Markdown files. Add post-clean flag. |
 | 00.00.04 | 2022-Jul-16 | akulcsar | Support latexmk and LuaLaTeX. |
 | 00.00.03 | 2022-Jul-12 | akulcsar | Add interactive mode. |
 | 00.00.02 | 2022-Jun-26 | akulcsar | Repackage as a single script with functions. |
@@ -60,3 +60,4 @@ Displays the help file with all of the available options.
 | ...For HTML, look for -web.tex | | |
 | Model --clean routine after PowerShell version | N/A | |
 | Allow --help to be called without requiring main file | N/A | 00.00.01 |
+| Add --post-clean flag to cleanup after builds | 00.00.05 | 00.00.05 |

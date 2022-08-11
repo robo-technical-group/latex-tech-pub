@@ -15,7 +15,7 @@ Main TeX file to compile.
 Same as --figures --pdf --epub --html --markdown.
 
 .PARAMETER Clean
-Deletes the output directory before building.
+Runs the cleanup routines before building.
 
 .PARAMETER Epub
 Builds the ePub files.
@@ -33,13 +33,16 @@ Runs the LaTeX executables in interactive mode.
 Use LuaTeX engine instead of LaTeX engine.
 
 .PARAMETER Markdown
-Builds MarkDown files.
+Builds Markdown files.
 
 .PARAMETER Pandoc
 Use Pandoc when creating web sites and e-books.
 
 .PARAMETER Pdf
 Builds the PDF file.
+
+.PARAMETER PostClean
+Runs the cleanup routines after building.
 
 .PARAMETER Quick
 Runs just one pass of pdflatex, et al.
@@ -93,6 +96,7 @@ param (
     [switch]$Interactive,
     [switch]$Pandoc,
     [switch]$Pdf,
+    [switch]$PostClean,
     [switch]$Epub,
     [switch]$Html,
     [switch]$Luatex,
@@ -798,6 +802,7 @@ If ($All) {
     $Pdf = $true
     $Epub = $true
     $Web = $true
+    $Markdown = $true
 }
 
 If ($Html) {
@@ -822,6 +827,10 @@ If ($Epub) {
 
 If ($Markdown) {
     Build-Markdown -OutputDir ($OutDir + "/md") $MainFile
+}
+
+If ($PostClean) {
+    Remove-TempFiles
 }
 
 Set-Location $StartLocation

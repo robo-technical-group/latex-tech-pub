@@ -63,6 +63,7 @@ markdown=0
 outdir=./latex.out
 pandoc=0
 pdf=0
+postclean=0
 quick=0
 xetex=0
 web=0
@@ -427,6 +428,8 @@ print_help() {
     echo "    Build Markdown files."
     echo "  -p, --pdf"
     echo "    Builds the PDF file."
+    echo "  --post-clean"
+    echo "    Runs the cleanup routines after building."
     echo "  -q, --quick"
     echo "    Runs just one pass of pdflatex, et al."
     echo "  -v, --debug, --verbose"
@@ -803,6 +806,10 @@ do
         pdf=1
         ;;
 
+    --post-clean)
+        postclean=1
+        ;;
+
     -q|--quick)
         quick=1
         ;;
@@ -884,6 +891,11 @@ fi
 if [ $md -eq 1 ]
 then
     build_markdown "${outdir}/md"
+fi
+
+if [ $postclean -eq 1]
+then
+    echo "Cleanup routines requested after build. Not yet implemented."
 fi
 
 cd "$cwd"
