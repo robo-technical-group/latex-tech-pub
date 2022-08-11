@@ -24,7 +24,7 @@ Builds the ePub files.
 Builds any figure files located in the working directory.
 
 .PARAMETER Html
-Builds the web site files.
+Builds the web site files. Synonymous with -Web.
 
 .PARAMETER Interactive
 Runs the LaTeX executables in interactive mode.
@@ -40,6 +40,9 @@ Runs just one pass of pdflatex, et al.
 
 .PARAMETER Xetex
 Use XeTeX engine instead of LaTeX engine.
+
+.PARAMETER Web
+Builds the web site files. Synonymous with -Html.
 #>
 
 ######################################################################
@@ -82,22 +85,27 @@ param (
     [switch]$Clean,
     [switch]$Figures,
     [switch]$Interactive,
+    [switch]$Pandoc,
     [switch]$Pdf,
     [switch]$Epub,
     [switch]$Html,
     [switch]$Luatex,
     [switch]$Quick,
-    [switch]$Xetex
+    [switch]$Xetex,
+    [switch]$Web
 )
 
 # Executables
-# Modify (e.g. supply full path) as needed for executables not located in your path.
+# Modify (e.g., supply full path) as needed for executables not located in your path.
 Set-Variable Biber -Option ReadOnly -Value "biber"
 Set-Variable LatexMk -Option ReadOnly -Value "latexmk"
 Set-Variable LuaLatex -Option ReadOnly -Value "lualatex"
+Set-Variable Make4ht -Option ReadOnly -Value "make4ht"
 Set-Variable MakeGlossaries -Option ReadOnly -Value "makeglossaries"
 Set-Variable MakeIndex -Option ReadOnly -Value "makeindex"
+Set-Variable PandocExe -Option ReadOnly -Value "pandoc"
 Set-Variable PdfLatex -Option ReadOnly -Value "pdflatex"
+Set-Variable Tidy -Option Readonly -Value "tidy"
 Set-Variable XeLatex -Option ReadOnly -Value "xelatex"
 
 # Functions
@@ -109,16 +117,15 @@ function Build-Pdf {
     
         [Parameter(Mandatory,Position=1)]
         [ValidateNotNullOrEmpty()]
-        [string] $OutputDir,
-        [switch] $Quick
+        [string] $OutputDir
     )
 
     Build-OutputDir $OutputDir
 
-    If (Test-Executables @($LatexMk)) {
-        Build-Pdf-LatexMk $MainFile -OutputDir $OutputDir -Quick:$Quick
+    If ((Test-Executables @($LatexMk)) -and (!($Quick))) {
+        Build-Pdf-LatexMk $MainFile -OutputDir $OutputDir
     } Else {
-        Build-Pdf-PdfLatex $MainFile -OutputDir $OutputDir -Quick:$Quick
+        Build-Pdf-PdfLatex $MainFile -OutputDir $OutputDir
     }
 }
 
@@ -130,8 +137,7 @@ function Build-Pdf-LatexMk {
     
         [Parameter(Mandatory,Position=1)]
         [ValidateNotNullOrEmpty()]
-        [string] $OutputDir,
-        [switch] $Quick
+        [string] $OutputDir
     )
 
     $InvExpr = $LatexMk +
@@ -153,8 +159,6 @@ function Build-Pdf-LatexMk {
     Invoke-String $InvExpr
 }
 
-# TODO
-# - [X] Add -quick switch (just run one pass of pdflatex)
 function Build-Pdf-PdfLatex {
     param (
         [Parameter(Mandatory,Position=0)]
@@ -163,8 +167,7 @@ function Build-Pdf-PdfLatex {
     
         [Parameter(Mandatory,Position=1)]
         [ValidateNotNullOrEmpty()]
-        [string] $OutputDir,
-        [switch] $Quick
+        [string] $OutputDir
     )
 
     $PdfExe = $Xetex ? $XeLatex : ($Luatex ? $LuaLatex : $PdfLatex)
@@ -210,7 +213,8 @@ function Build-OutputDir {
     param (
         [Parameter(Mandatory,Position=0)]
         [ValidateNotNullOrEmpty()]
-        [string] $OutputDir
+        [string] $OutputDir,
+        [switch] $NoRecurse
     )
 
     If (!(Test-Path $OutputDir)) {
@@ -221,13 +225,81 @@ function Build-OutputDir {
         Exit 1
     }
     
-    Write-Verbose "Duplicate folder structure so that pdflatex can output .aux files."
-    ForEach ($dir in (Get-ChildItem -Directory -Path $MainFileLocation)) {
-        If ($dir.Name -ne "latex.out") {
-            Write-Verbose "Duplicating folder $dir to output directory $OutputDir."
-            # -Force removes errors when a directory already exists.
-            Copy-Item $dir.FullName $OutputDir -Filter {PSIsContainer} -Recurse -Force
+    If (!($NoRecurse)) {
+        Write-Verbose "Duplicate folder structure so that pdflatex can output .aux files."
+        ForEach ($dir in (Get-ChildItem -Directory -Path $MainFileLocation)) {
+            If ($dir.Name -ne "latex.out") {
+                Write-Verbose "Duplicating folder $dir to output directory $OutputDir."
+                # -Force removes errors when a directory already exists.
+                Copy-Item $dir.FullName $OutputDir -Filter {PSIsContainer} -Recurse -Force
+            }
         }
+    }
+}
+
+function Build-Web {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    Build-OutputDir $OutputDir -NoRecurse
+    If ($Pandoc) {
+        Build-Web-Pandoc $MainFile -OutputDir $OutputDir
+    } Else {
+        Build-Web-Make4ht $MainFile -OutputDir $OutputDir
+    }
+}
+
+function Build-Web-Make4ht {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    If (Test-Executables @($Make4ht)) {
+        $ConfigFile = "make4htrc"
+        $TidyFilter = (Test-Executables @($Tidy)) ? "+tidy " : " "
+        $InvExpr = $Make4ht + " --output-dir """ + $OutputDir + """ --utf8" + (
+            (Test-Path $ConfigFile) ? " --build-file " + $ConfigFile + " --format html5 " + $MainFile
+            : " --format html5+common_domfilters" + $TidyFilter + $MainFile +  """mathjax,2"""
+        )
+
+        Write-Output "Building web files."
+        Invoke-String $InvExpr
+    }
+}
+
+function Build-Web-Pandoc {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    If (Test-Executables @($PandocExe)) {
+        $ConfigFile = "pandoc-web.yaml"
+        $InvExpr = "pandoc --from=latex --to=html5 --output=""" + $OutputDir + "/" + $MainFile + ".html"" " + (
+            (Test-Path $ConfigFile) ? ("--defaults=" + $ConfigFile + " ")
+            : "--standalone --mathjax "
+        ) + $MainFile + ".tex"
+
+        Write-Output "Building web files."
+        Invoke-String $InvExpr
     }
 }
 
@@ -623,7 +695,11 @@ If ($All) {
     $Figures = $true
     $Pdf = $true
     $Epub = $true
-    $Html = $true
+    $Web = $true
+}
+
+If ($Html) {
+    $Web = $true
 }
 
 If ($Clean) {
@@ -631,7 +707,11 @@ If ($Clean) {
 }
 
 If ($Pdf) {
-    Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile -Quick:$Quick
+    Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile
+}
+
+If ($Web) {
+    Build-Web -OutputDir ($OutDir + "/html") $MainFile
 }
 
 Set-Location $StartLocation

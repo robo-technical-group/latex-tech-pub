@@ -39,9 +39,12 @@
 readonly biber=$(which biber)
 readonly latexmk=$(which latexmk)
 readonly lualatex=$(which lualatex)
+readonly make4ht=$(which make4ht)
 readonly makeglossaries=$(which makeglossaries)
 readonly makeindex=$(which makeindex)
+readonly pandocbin=$(which pandoc)
 readonly pdflatex=$(which pdflatex)
+readonly tidy=$(which tidy)
 readonly tree=$(which tree)
 readonly xelatex=$(which xelatex)
 
@@ -56,9 +59,11 @@ interactive=0
 luatex=0
 mainfile=main
 outdir=./latex.out
+pandoc=0
 pdf=0
 quick=0
 xetex=0
+web=0
 
 # Functions
 
@@ -185,6 +190,7 @@ build_pdf_pdflatex() {
 
 build_outputdir() {
     local outdir="$1"
+    local norecurse=${2:-0}
 
     [ ! -d "$outdir" ] && mkdir -p "$outdir"
     if [ ! -d "$outdir" ]
@@ -193,13 +199,94 @@ build_outputdir() {
         return 1
     fi
 
-    for d in $(ls -d */) ;
-    do
-        if [ "$d" != "latex.out/" ]
+    if [ $norecurse -eq 0 ]
+    then
+        for d in $(ls -d */) ;
+        do
+            if [ "$d" != "latex.out/" ]
+            then
+                tree -dfi --noreport "$d" | xargs -I{} mkdir -p "${outdir}/{}"
+            fi
+        done
+    fi
+}
+
+build_web() {
+    local $outdir="$1"
+    build_outputdir "$outdir" 1
+
+    if [ $pandoc -eq 1 ]
+    then
+        build_web_pandoc $outdir
+    else
+        build_web_make4ht $outdir
+    fi
+}
+
+build_web_make4ht() {
+    local outdir="$1"
+    local retval=0
+    test_exes "make4ht"
+    retval=$?
+    if [ $retval -gt 0 ]
+    then
+        return $retval
+    fi
+
+    local config="make4htrc"
+    local htmlfilter="html5+common_domfilters+tidy"
+    if [ -z $tidy -o ! -x $tidy ]
+    then
+        htmlfilter="html5+common_domfilters"
+    fi
+
+    echo "Building web site." | tee -a $logfile
+    if [ -e "$config" ]
+    then
+        if [ $DEBUG -eq 0 ]
         then
-            tree -dfi --noreport "$d" | xargs -I{} mkdir -p "${outdir}/{}"
+            $make4ht --output-dir "$outdir" --utf8 --build-file $config --format html5 $mainfile >> $logfile 2>&1
+        else
+            $make4ht --output-dir "$outdir" --utf8 --build-file $config --format html5 $mainfile | tee -a $logfile
         fi
-    done
+    else
+        if [ $DEBUG -eq 0 ]
+        then
+            $make4ht --output-dir "$outdir" --utf8 --format $htmlfilter $mainfile "mathjax,2" >> $logfile 2>&1
+        else
+            $make4ht --output-dir "$outdir" --utf8 --format $htmlfilter $mainfile "mathjax,2" | tee -a $logfile
+        fi
+    fi
+}
+
+build_web_pandoc() {
+    local outdir="$1"
+    local retval=0
+    test_exes "pandocbin"
+    retval=$?
+    if [ $retval -gt 0 ]
+    then
+        return $retval
+    fi
+
+    local config="pandoc-web.yaml"
+    echo "Building web site." | tee -a $logfile
+    if [ -e "$config" ]
+    then
+        if [ $DEBUG -eq 0 ]
+        then
+            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
+        else
+            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --defaults=$config ${mainfile}.tex | tee -a $logfile
+        fi
+    else
+        if [ $DEBUG -eq 0 ]
+        then
+            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --standalone --mathjax ${mainfile}.tex >> $logfile 2>&1
+        else
+            $pandocbin --from=latex --to=html5 --output="./latex.out/html/${mainfile}.html" --standalone --mathjax ${mainfile}.tex | tee -a $logfile
+        fi
+    fi
 }
 
 print_help() {
@@ -215,7 +302,7 @@ print_help() {
     echo "  -f, --figures"
     echo "    Builds any figure files located in the working directory."
     echo "  -h, --html"
-    echo "    Builds the web site files."
+    echo "    Build web site files. Synonymous with -w and --web."
     echo "  -i, --interactive"
     echo "    Run programs in interactive mode."
     echo "  -l, --luatex"
@@ -226,6 +313,8 @@ print_help() {
     echo "    Runs just one pass of pdflatex, et al."
     echo "  -v, --debug, --verbose"
     echo "    Output additional information during build."
+    echo "  -w, --web"
+    echo "    Build web site files. Synonymous with -h and --html."
     echo "  -x, -xetex"
     echo "    Use XeTeX engine instead of LaTeX engine."
     echo "  -?, --help"
@@ -549,7 +638,7 @@ do
         figs=1
         pdf=1
         epub=1
-        html=1
+        web=1
         ;;
 
     -c|--content-dir)
@@ -576,6 +665,7 @@ do
 
     -h|--html)
         html=1
+        web=1
         ;;
 
     -i|--interactive)
@@ -600,6 +690,10 @@ do
 
     -x|--xetex)
         xetex=1
+        ;;
+
+    -w|--web)
+        web=1
         ;;
 
     *)
@@ -652,6 +746,15 @@ then
         echo "Building PDF."
     fi
     build_pdf "${outdir}/pdf"
+fi
+
+if [ $web -eq 1 ]
+then
+    if [ $DEBUG -eq 1 ]
+    then
+        echo "Building web site."
+    fi
+    build_web "${outdir}/html"
 fi
 
 cd "$cwd"
