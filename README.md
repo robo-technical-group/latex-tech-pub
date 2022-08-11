@@ -42,7 +42,7 @@ Displays the help file with all of the available options.
 
 | Release | Date | Author | Changes |
 | --- | --- | --- | --- |
-| 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites, ePubs, and Markdown files. Add post-clean flag. |
+| 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites, ePubs, and Markdown files. Add post-clean flag. Support multiple main files. |
 | 00.00.04 | 2022-Jul-16 | akulcsar | Support latexmk and LuaLaTeX. |
 | 00.00.03 | 2022-Jul-12 | akulcsar | Add interactive mode. |
 | 00.00.02 | 2022-Jun-26 | akulcsar | Repackage as a single script with functions. |
@@ -66,12 +66,12 @@ Displays the help file with all of the available options.
 | Return to original directory when done | 00.00.03 | 00.00.03 |
 | pandoc option | 00.00.05 | 00.00.05 |
 | Support configuration file for alternate binary locations | | |
-| Support multiple main files with suffixes | | |
-| ...For print-ready PDF, look for -print.tex then -pdf.tex | | |
-| ...For PDF, look for -pdf.tex | | |
-| ...For ePub, look for -epub.tex then -web.tex | | |
-| ...For Markdown, look for -md.tex then -web.tex | | |
-| ...For HTML, look for -web.tex | | |
+| Support multiple main files with suffixes | 00.00.05 | 00.00.05 |
+| ...For print-ready PDF, look for -print.tex then -pdf.tex | 00.00.05 | 00.00.05 |
+| ...For PDF, look for -pdf.tex | 00.00.05 | 00.00.05 |
+| ...For ePub, look for -epub.tex then -web.tex | 00.00.05 | 00.00.05 |
+| ...For Markdown, look for -md.tex then -web.tex | 00.00.05 | 00.00.05 |
+| ...For HTML, look for -web.tex | 00.00.05 | 00.00.05 |
 | Model --clean routine after PowerShell version | N/A | |
 | Allow --help to be called without requiring main file | N/A | 00.00.01 |
 | Add --post-clean flag to cleanup after builds | 00.00.05 | 00.00.05 |

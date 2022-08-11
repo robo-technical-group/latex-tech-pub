@@ -747,6 +747,23 @@ function Remove-TempFiles {
     }
 }
 
+function Test-Alternates() {
+    param (
+        [string[]]$Suffixes
+    )
+
+    $toReturn = $RealMain
+    foreach ($suffix in $Suffixes) {
+        $testfile = $RealMain + $suffix
+        If (Test-Path $testfile) {
+            $toReturn = Split-Path -LeafBase $testfile
+            break
+        }
+    }
+
+    return $toReturn
+}
+
 function Test-Executables {
     param (
         [string[]]$Executables
@@ -765,36 +782,37 @@ function Test-Executables {
     return $retval
 }
 
-# Main
-
-If (-Not((Test-Path $MainFile -PathType Leaf) -or (Test-Path ($MainFile + ".tex") -PathType Leaf))) {
-    Write-Error "Main file '$MainFile' does not exist; aborting."
-    Exit 1
+function Write-Variables() {
+    Write-Verbose "Current state:"
+    Write-Verbose "MainFileFullPath = $MainFileFullPath"
+    Write-Verbose "MainFileLocation = $MainFileLocation"
+    Write-Verbose "MainFile = $MainFile"
+    Write-Verbose "Ext = $Ext"
+    Write-Verbose "OutDir = $OutDir"
+    Write-Verbose "LogFile = $LogFile"
+    Write-Verbose "RealMain = $RealMain"
+    Write-Verbose ("Main file exists? " + (Test-Path ($MainFile + $Ext)))
+    Write-Verbose ""
 }
 
+# Main
 # Other global variables
 $Ext = [System.IO.Path]::GetExtension($MainFile)
 If ([string]::IsNullOrWhiteSpace($Ext)) {
     $Ext = ".tex"
 }
-$LogFile = $OutDir + "\build.log"
-$MainFileFullPath = Resolve-Path ($MainFile + $Ext)
-$MainFileLocation = Split-Path $MainFileFullPath
-$MainFile = [System.IO.Path]::GetFileNameWithoutExtension($MainFileFullPath)
 $OutDir = "./latex.out"
-$StartLocation = Get-Location
-
-# Last test before starting
-If (-Not(Test-Path $MainFileFullPath -PathType Leaf)) {
-    Write-Error "Main file '$MainFileFullPath' does not exist; aborting."
-    Exit 1
+$LogFile = $OutDir + "\build.log"
+$MainFileLocation = Split-Path $MainFile
+If ([string]::IsNullOrWhiteSpace($MainFileLocation)) {
+    $MainFileLocation = (Resolve-Path ".")
+} Else {
+    $MainFileLocation = (Resolve-Path $MainFileLocation)
 }
-
-Write-Verbose "Main file is ${MainFileFullPath}."
-Write-Verbose "Main file located at ${MainFileLocation}."
-Write-Verbose "Considering main file to be ${MainFile}."
-
-Set-Location $MainFileLocation
+$MainFile = Split-Path -LeafBase $MainFile
+$MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+$RealMain = $MainFile
+$StartLocation = Get-Location
 
 If ($All) {
     Write-Verbose "Activating all build functions."
@@ -809,24 +827,75 @@ If ($Html) {
     $Web = $true
 }
 
+# Last test before starting
+If (-Not(Test-Path $MainFileLocation -PathType Container)) {
+    Write-Error "Main file location '$MainFileLocation' does not exist; aborting."
+    Exit 1
+}
+
+Write-Variables
+Set-Location $MainFileLocation
+
 If ($Clean) {
     Remove-TempFiles
 }
 
 If ($Pdf) {
-    Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile
+    Write-Output "Building print-ready PDF."
+    $MainFile = Test-Alternates @("-print.tex", "-pdf.tex")
+    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+    Write-Variables
+    If (Test-Path $MainFileFullPath -PathType Leaf) {
+        Build-Pdf -OutputDir ($OutDir + "/print") $MainFile
+    } Else {
+        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
+    }
+
+    Write-Output "Building PDF."
+    $MainFile = Test-Alternates @("-pdf.tex")
+    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+    Write-Variables
+    If (Test-Path $MainFileFullPath -PathType Leaf) {
+        Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile
+    } Else {
+        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
+    }
 }
 
 If ($Web) {
-    Build-Web -OutputDir ($OutDir + "/html") $MainFile
+    Write-Output "Building web site."
+    $MainFile = Test-Alternates @("-web.tex")
+    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+    Write-Variables
+    If (Test-Path $MainFileFullPath -PathType Leaf) {
+        Build-Web -OutputDir ($OutDir + "/html") $MainFile
+    } Else {
+        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
+    }
 }
 
 If ($Epub) {
-    Build-Ebook -OutputDir ($OutDir + "/epub") $MainFile
+    Write-Output "Building e-book."
+    $MainFile = Test-Alternates @("-epub.tex", "-web.tex")
+    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+    Write-Variables
+    If (Test-Path $MainFileFullPath -PathType Leaf) {
+        Build-Ebook -OutputDir ($OutDir + "/epub") $MainFile
+    } Else {
+        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
+    }
 }
 
 If ($Markdown) {
-    Build-Markdown -OutputDir ($OutDir + "/md") $MainFile
+    Write-Output "Building Markdown files."
+    $MainFile = Test-Alternates @("-md.tex", "-web.tex")
+    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+    Write-Variables
+    If (Test-Path $MainFileFullPath -PathType Leaf) {
+        Build-Markdown -OutputDir ($OutDir + "/md") $MainFile
+    } Else {
+        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
+    }
 }
 
 If ($PostClean) {

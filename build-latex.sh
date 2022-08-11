@@ -65,6 +65,7 @@ pandoc=0
 pdf=0
 postclean=0
 quick=0
+realmain=main
 xetex=0
 web=0
 
@@ -442,6 +443,26 @@ print_help() {
     echo "    Displays this information."
 }
 
+test_alternates() {
+    mainfile=$realmain
+    for s in $1;
+    do
+        local testfile="$realmain$s"
+        if [ ! -z "$testfile" -a -e "$testfile" ]
+        then
+            testfile=$(get_full_path $testfile)
+            splitPath $testfile mainfilelocation fn mainfile ext
+            if [ -z "$ext" ]
+            then
+                ext=.tex
+                fn=${fn}.tex
+            fi
+            break
+        fi
+    done
+    mainfilefullpath=${mainfilelocation}/$mainfile$ext
+}
+
 test_exes() {
     local retval=0
     for x in $1 ;
@@ -463,6 +484,21 @@ test_exes() {
         fi
     done
     return $retval
+}
+
+write_vars() {
+    echo "Current state:"
+    echo MainFileFullPath = $mainfilefullpath
+    echo MainFileFullLocation = $mainfilelocation
+    echo MainFile = $mainfile
+    echo Ext = $ext
+    echo OutDir = $outdir
+    echo LogFile = $logfile
+    echo RealMain = $realmain
+    local msg="Main file exsts?"
+    [ ! -z "$mainfile$ext" -a -e "$mainfile$ext" ] && msg="Main file exists? Yes" || msg="Main file exists? No"
+    echo $msg
+    echo
 }
 
 # Inspired by https://stackoverflow.com/questions/35718955/bash-script-to-get-its-full-path-use-source-to-invoke-it
@@ -836,12 +872,6 @@ do
     GA_getarg
 done
 
-if [ ! -e $mainfile -a ! -e ${mainfile}.tex ]
-then
-    echo "Main file '${mainfile}' does not exist; aborting."
-    exit 1
-fi
-
 mainfile=$(get_full_path $mainfile)
 splitPath $mainfile mainfilelocation fn mainfile ext
 if [ -z "$ext" ]
@@ -850,15 +880,22 @@ then
     fn=${fn}.tex
 fi
 mainfilefullpath=${mainfilelocation}/$fn
+realmain=$mainfile
 logfile="${outdir}/build.log"
-cd "$mainfilelocation"
+
+if [ $DEBUG -eq 1 ]
+then
+    write_vars
+fi
 
 # Last test before starting
-if [ ! -e $mainfilefullpath ]
+if [ ! -e $mainfilelocation ]
 then
-    echo " Main file '${mainfilefullpath}' does not exist; aborting."
+    echo " Main file location '${mainfilelocation}' does not exist; aborting."
     exit 1
 fi
+cd "$mainfilelocation"
+
 
 if [ $clean -eq 1 -a -e $outdir ]
 then
@@ -871,26 +908,79 @@ fi
 
 if [ $pdf -eq 1 ]
 then
+    echo "Building print-ready PDF."
+    test_alternates "-print.tex -pdf.tex"
     if [ $DEBUG -eq 1 ]
     then
-        echo "Building PDF."
+        write_vars
     fi
-    build_pdf "${outdir}/pdf"
+    if [ -e $mainfilefullpath ]
+    then
+        build_pdf "${outdir}/print"
+    else
+        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
+    fi
+
+    echo "Building PDF."
+    test_alternates "-pdf.tex"
+    if [ $DEBUG -eq 1 ]
+    then
+        write_vars
+    fi
+    if [ -e $mainfilefullpath ]
+    then
+        build_pdf "${outdir}/pdf"
+    else
+        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
+    fi
 fi
 
 if [ $web -eq 1 ]
 then
-    build_web "${outdir}/html"
+    echo "Building web site."
+    test_alternates "-web.tex"
+    if [ $DEBUG -eq 1 ]
+    then
+        write_vars
+    fi
+    if [ -e $mainfilefullpath ]
+    then
+        build_web "${outdir}/html"
+    else
+        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
+    fi
 fi
 
 if [ $epub -eq 1 ]
 then
-    build_epub "${outdir}/epub"
+    echo "Building e-book."
+    test_alternates "-epub.tex -web.tex"
+    if [ $DEBUG -eq 1 ]
+    then
+        write_vars
+    fi
+    if [ -e $mainfilefullpath ]
+    then
+        build_epub "${outdir}/epub"
+    else
+        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
+    fi
 fi
 
 if [ $md -eq 1 ]
 then
-    build_markdown "${outdir}/md"
+    echo "Building Markdown files."
+    test_alternates "-md.tex -web.tex"
+    if [ $DEBUG -eq 1 ]
+    then
+        write_vars
+    fi
+    if [ -e $mainfilefullpath ]
+    then
+        build_markdown "${outdir}/md"
+    else
+        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
+    fi
 fi
 
 if [ $postclean -eq 1]
