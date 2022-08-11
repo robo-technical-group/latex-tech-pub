@@ -14,7 +14,8 @@ path. Alternatively, symlink to these files.
 
 `$ build-latex.sh --all main`
 
-Builds PDF, HTML, and ePub documents from the `main.tex` file.
+Builds PDF, HTML, ePub, and Markdown documents from the `main.tex` file.
+Uses `main-print.tex`, `main-pdf.tex`, `main-web.tex`, `main-md.tex`, and `main-epub.tex` files instead if they exist.
 
 ## List of options
 
