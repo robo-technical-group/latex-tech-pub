@@ -11,6 +11,7 @@ path. Alternatively, symlink to these files.
 ## Simple usage
 
 `> build-latex.ps1 -all main` --or-- `> build-latex -all main`
+
 `$ build-latex.sh --all main`
 
 Builds PDF, HTML, and ePub documents from the `main.tex` file.
@@ -18,6 +19,7 @@ Builds PDF, HTML, and ePub documents from the `main.tex` file.
 ## List of options
 
 `> Get-Help build-latex`
+
 `$ build-latex.sh --help`
 
 Displays the help file with all of the available options.
@@ -26,7 +28,7 @@ Displays the help file with all of the available options.
 
 | Release | Date | Author | Changes |
 | --- | --- | --- | --- |
-| 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites. |
+| 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites, ePubs, and Markdown files. |
 | 00.00.04 | 2022-Jul-16 | akulcsar | Support latexmk and LuaLaTeX. |
 | 00.00.03 | 2022-Jul-12 | akulcsar | Add interactive mode. |
 | 00.00.02 | 2022-Jun-26 | akulcsar | Repackage as a single script with functions. |
@@ -42,8 +44,8 @@ Displays the help file with all of the available options.
 | ... Index | 00.00.01 | 00.00.01 |
 | ... Glossary | 00.00.01 | 00.00.01 |
 | PDF build | 00.00.01 | 00.00.01 |
-| ePub3 build (tex4ebook) | | |
-| ePub3 build (pandoc) | | |
+| ePub3 build (tex4ebook) | 00.00.05 | 00.00.05 |
+| ePub3 build (pandoc) | 00.00.05 | 00.00.05 |
 | HTML build (make4ht) | 00.00.05 | 00.00.05 |
 | HTML build (pandoc) | 00.00.05 | 00.00.05 |
 | Markdown build | | |

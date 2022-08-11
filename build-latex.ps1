@@ -105,10 +105,81 @@ Set-Variable MakeGlossaries -Option ReadOnly -Value "makeglossaries"
 Set-Variable MakeIndex -Option ReadOnly -Value "makeindex"
 Set-Variable PandocExe -Option ReadOnly -Value "pandoc"
 Set-Variable PdfLatex -Option ReadOnly -Value "pdflatex"
+Set-Variable Tex4Ebook -Option ReadOnly -Value "tex4ebook"
 Set-Variable Tidy -Option Readonly -Value "tidy"
 Set-Variable XeLatex -Option ReadOnly -Value "xelatex"
 
 # Functions
+function Build-Ebook {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    Build-OutputDir $OutputDir -NoRecurse
+    If ($Pandoc) {
+        Build-Ebook-Pandoc $MainFile -OutputDir $OutputDir
+    } Else {
+        Build-Ebook-Tex4Ebook $MainFile -OutputDir $OutputDir
+    }
+}
+
+function Build-Ebook-Pandoc {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    If (Test-Executables @($PandocExe)) {
+        $ConfigFile = "pandoc-epub.yaml"
+        $InvExpr = "pandoc --from=latex --to=epub3 --output=""" + $OutputDir + "/" + $MainFile + ".epub"" " + (
+            (Test-Path $ConfigFile) ? ("--defaults=" + $ConfigFile + " ")
+            : "--mathml "
+        ) + $MainFile + ".tex"
+
+        Write-Output "Building e-book."
+        Invoke-String $InvExpr
+    }
+}
+
+function Build-Ebook-Tex4Ebook {
+    param (
+        [Parameter(Mandatory,Position=0)]
+        [ValidateNotNullOrEmpty()]
+        [string] $MainFile,
+    
+        [Parameter(Mandatory,Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $OutputDir
+    )
+
+    If (Test-Executables @($Tex4Ebook)) {
+        $ConfigFile = "tex4ebookrc"
+        $InvExpr = $Tex4Ebook + " --format epub3" + (
+            (Test-Path $ConfigFile) ? " --build-file " + $ConfigFile : ""
+        ) + " " + $MainFile
+
+        Write-Output "Building e-book."
+        Invoke-String $InvExpr
+
+        $EpubFile = $MainFile + ".epub"
+        If (Test-Path $EpubFile) {
+            Write-Verbose "Moving ePub file to output directory."
+            Move-Item $EpubFile (Join-Path $OutputDir $EpubFile) -Force
+        }
+    }
+}
+
 function Build-Pdf {
     param (
         [Parameter(Mandatory,Position=0)]
@@ -712,6 +783,10 @@ If ($Pdf) {
 
 If ($Web) {
     Build-Web -OutputDir ($OutDir + "/html") $MainFile
+}
+
+If ($Epub) {
+    Build-Ebook -OutputDir ($OutDir + "/epub") $MainFile
 }
 
 Set-Location $StartLocation

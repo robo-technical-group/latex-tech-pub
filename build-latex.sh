@@ -44,6 +44,7 @@ readonly makeglossaries=$(which makeglossaries)
 readonly makeindex=$(which makeindex)
 readonly pandocbin=$(which pandoc)
 readonly pdflatex=$(which pdflatex)
+readonly tex4ebook=$(which tex4ebook)
 readonly tidy=$(which tidy)
 readonly tree=$(which tree)
 readonly xelatex=$(which xelatex)
@@ -66,6 +67,89 @@ xetex=0
 web=0
 
 # Functions
+
+build_epub() {
+    local $outdir="$1"
+    build_outputdir "$outdir" 1
+
+    if [ $pandoc -eq 1 ]
+    then
+        build_epub_pandoc $outdir
+    else
+        build_epub_tex4ebook $outdir
+    fi
+}
+
+build_epub_pandoc() {
+    local outdir="$1"
+    local retval=0
+    test_exes "pandocbin"
+    retval=$?
+    if [ $retval -gt 0 ]
+    then
+        return $retval
+    fi
+
+    local config="pandoc-epub.yaml"
+    echo "Building e-book." | tee -a $logfile
+    if [ -e "$config" ]
+    then
+        if [ $DEBUG -eq 0 ]
+        then
+            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --defaults=$config ${mainfile}.tex >> $logfile 2>&1
+        else
+            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --defaults=$config ${mainfile}.tex | tee -a $logfile
+        fi
+    else
+        if [ $DEBUG -eq 0 ]
+        then
+            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --mathml ${mainfile}.tex >> $logfile 2>&1
+        else
+            $pandocbin --from=latex --to=epub3 --output="./latex.out/epub/${mainfile}.epub" --mathml ${mainfile}.tex | tee -a $logfile
+        fi
+    fi
+}
+
+build_epub_tex4ebook() {
+    local outdir="$1"
+    local retval=0
+    test_exes "tex4ebook"
+    retval=$?
+    if [ $retval -gt 0 ]
+    then
+        return $retval
+    fi
+
+    local config="tex4ebookrc"
+
+    echo "Building e-book." | tee -a $logfile
+    if [ -e "$config" ]
+    then
+        if [ $DEBUG -eq 0 ]
+        then
+            $tex4ebook --format epub3 --build-file $config $mainfile >> $logfile 2>&1
+        else
+            $tex4ebook --format epub3 --build-file $config $mainfile | tee -a $logfile
+        fi
+    else
+        if [ $DEBUG -eq 0 ]
+        then
+            $tex4ebook --format epub3 $mainfile >> $logfile 2>&1
+        else
+            $tex4ebook --format epub3 $mainfile | tee -a $logfile
+        fi
+    fi
+
+    epubfile="${mainfile}.epub"
+    if [ -e "$epubfile" ]
+    then
+        if [ $DEBUG -eq 0 ]
+        then
+            echo "Moving ePub file to output directory."
+        fi
+        mv "$epubfile" "$outdir"/
+    fi
+}
 
 build_pdf() {
     local outdir="$1"
@@ -750,11 +834,12 @@ fi
 
 if [ $web -eq 1 ]
 then
-    if [ $DEBUG -eq 1 ]
-    then
-        echo "Building web site."
-    fi
     build_web "${outdir}/html"
+fi
+
+if [ $epub -eq 1 ]
+then
+    build_epub "${outdir}/epub"
 fi
 
 cd "$cwd"
