@@ -64,8 +64,10 @@ outdir=./latex.out
 pandoc=0
 pdf=0
 postclean=0
+print=0
 quick=0
 realmain=main
+readonly version=0.0.6
 xetex=0
 web=0
 
@@ -408,11 +410,13 @@ build_web_pandoc() {
 }
 
 print_help() {
+    echo "build-latex.sh"
+    echo "Version ${version}"
     echo "Usage:"
     echo "  $ build.sh [options] main-file[.tex]"
     echo "Options:"
     echo "  -a, --all"
-    echo "    Same as --figures --pdf --epub --html."
+    echo "    Same as --figures --pdf --print --epub --html --markdown."
     echo "  --clean"
     echo "    Deletes the output directory before building."
     echo "  -e, --epub"
@@ -428,9 +432,11 @@ print_help() {
     echo "  -m, --markdown"
     echo "    Build Markdown files."
     echo "  -p, --pdf"
-    echo "    Builds the PDF file."
+    echo "    Builds the PDF file (meant for online viewing)."
     echo "  --post-clean"
     echo "    Runs the cleanup routines after building."
+    echo "  --print"
+    echo "    Builds the print-ready PDF file."
     echo "  -q, --quick"
     echo "    Runs just one pass of pdflatex, et al."
     echo "  -v, --debug, --verbose"
@@ -794,6 +800,7 @@ do
     -a|--all)
         figs=1
         pdf=1
+        print=1
         epub=1
         web=1
         markdown=1
@@ -840,6 +847,10 @@ do
 
     -p|--pdf)
         pdf=1
+        ;;
+
+    --print)
+        print=1
         ;;
 
     --post-clean)
@@ -908,6 +919,22 @@ fi
 
 if [ $pdf -eq 1 ]
 then
+    echo "Building PDF for online viewing."
+    test_alternates "-pdf.tex"
+    if [ $DEBUG -eq 1 ]
+    then
+        write_vars
+    fi
+    if [ -e $mainfilefullpath ]
+    then
+        build_pdf "${outdir}/pdf"
+    else
+        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
+    fi
+fi
+
+if [ $print -eq 1 ]
+then
     echo "Building print-ready PDF."
     test_alternates "-print.tex -pdf.tex"
     if [ $DEBUG -eq 1 ]
@@ -917,19 +944,6 @@ then
     if [ -e $mainfilefullpath ]
     then
         build_pdf "${outdir}/print"
-    else
-        echo "Unable to find main file '${mainfilefullpath}'; skipping build."
-    fi
-
-    echo "Building PDF."
-    test_alternates "-pdf.tex"
-    if [ $DEBUG -eq 1 ]
-    then
-        write_vars
-    fi
-    if [ -e $mainfilefullpath ]
-    then
-        build_pdf "${outdir}/pdf"
     else
         echo "Unable to find main file '${mainfilefullpath}'; skipping build."
     fi

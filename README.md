@@ -43,6 +43,7 @@ Displays the help file with all of the available options.
 
 | Release | Date | Author | Changes |
 | --- | --- | --- | --- |
+| 00.00.06 | 2023-Feb-18 | akulcsar | Split print-ready PDF into its own option. Add items related to automatically building figures to the README to-do list. Add version string. |
 | 00.00.05 | 2022-Aug-11 | akulcsar | Build web sites, ePubs, and Markdown files. Add post-clean flag. Support multiple main files. |
 | 00.00.04 | 2022-Jul-16 | akulcsar | Support latexmk and LuaLaTeX. |
 | 00.00.03 | 2022-Jul-12 | akulcsar | Add interactive mode. |
@@ -58,12 +59,14 @@ Displays the help file with all of the available options.
 | ... Bibliography | 00.00.01 | 00.00.01 |
 | ... Index | 00.00.01 | 00.00.01 |
 | ... Glossary | 00.00.01 | 00.00.01 |
-| PDF build | 00.00.01 | 00.00.01 |
-| ePub3 build (tex4ebook) | 00.00.05 | 00.00.05 |
-| ePub3 build (pandoc) | 00.00.05 | 00.00.05 |
-| HTML build (make4ht) | 00.00.05 | 00.00.05 |
-| HTML build (pandoc) | 00.00.05 | 00.00.05 |
-| Markdown build | 00.00.05 | 00.00.05 |
+| Builds | | |
+| ... Online PDF build | 00.00.01 | 00.00.01 |
+| ... Printed PDF build | 00.00.06 | 00.00.06 |
+| ... ePub3 build (tex4ebook) | 00.00.05 | 00.00.05 |
+| ... ePub3 build (pandoc) | 00.00.05 | 00.00.05 |
+| ... HTML build (make4ht) | 00.00.05 | 00.00.05 |
+| ... HTML build (pandoc) | 00.00.05 | 00.00.05 |
+| ... Markdown build | 00.00.05 | 00.00.05 |
 | Return to original directory when done | 00.00.03 | 00.00.03 |
 | pandoc option | 00.00.05 | 00.00.05 |
 | Support configuration file for alternate binary locations | | |
@@ -76,3 +79,8 @@ Displays the help file with all of the available options.
 | Model --clean routine after PowerShell version | N/A | |
 | Allow --help to be called without requiring main file | N/A | 00.00.01 |
 | Add --post-clean flag to cleanup after builds | 00.00.05 | 00.00.05 |
+| Automatically generate figure files | | |
+| ... Microsoft PXT (MakeCode) block-based language | | |
+| ... Plant UML figures | | |
+| ... Mermaid figures | | |
+| ... TikZ figures | | |

@@ -12,7 +12,7 @@ Output files are located in the latex.out directory.
 Main TeX file to compile.
 
 .PARAMETER All
-Same as --figures --pdf --epub --html --markdown.
+Same as --figures --pdf --print --epub --html --markdown.
 
 .PARAMETER Clean
 Runs the cleanup routines before building.
@@ -39,7 +39,10 @@ Builds Markdown files.
 Use Pandoc when creating web sites and e-books.
 
 .PARAMETER Pdf
-Builds the PDF file.
+Builds the PDF file (meant for online viewing).
+
+.PARAMETER Print
+Builds the print-ready PDF file.
 
 .PARAMETER PostClean
 Runs the cleanup routines after building.
@@ -52,6 +55,11 @@ Use XeTeX engine instead of LaTeX engine.
 
 .PARAMETER Web
 Builds the web site files. Synonymous with -Html.
+
+.NOTES
+  Version: 0.0.6
+  Author:  Alex Kulcsar
+  Date:    18 February 2023
 #>
 
 ######################################################################
@@ -814,10 +822,12 @@ $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
 $RealMain = $MainFile
 $StartLocation = Get-Location
 
+
 If ($All) {
     Write-Verbose "Activating all build functions."
     $Figures = $true
     $Pdf = $true
+    $Print = $true
     $Epub = $true
     $Web = $true
     $Markdown = $true
@@ -841,22 +851,24 @@ If ($Clean) {
 }
 
 If ($Pdf) {
+    Write-Output "Building PDF for online viewing."
+    $MainFile = Test-Alternates @("-pdf.tex")
+    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
+    Write-Variables
+    If (Test-Path $MainFileFullPath -PathType Leaf) {
+        Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile
+    } Else {
+        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
+    }
+}
+
+If ($Print) {
     Write-Output "Building print-ready PDF."
     $MainFile = Test-Alternates @("-print.tex", "-pdf.tex")
     $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
     Write-Variables
     If (Test-Path $MainFileFullPath -PathType Leaf) {
         Build-Pdf -OutputDir ($OutDir + "/print") $MainFile
-    } Else {
-        Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
-    }
-
-    Write-Output "Building PDF."
-    $MainFile = Test-Alternates @("-pdf.tex")
-    $MainFileFullPath = Join-Path $MainFileLocation ($MainFile + $Ext)
-    Write-Variables
-    If (Test-Path $MainFileFullPath -PathType Leaf) {
-        Build-Pdf -OutputDir ($OutDir + "/pdf") $MainFile
     } Else {
         Write-Error "Unable to find main file '$MainFileFullPath'; skipping build."
     }
